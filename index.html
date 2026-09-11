@@ -88,9 +88,138 @@
             display: none;
             flex-direction: column;
             font-size: 0.9rem;
-            color: var(--main-accent);
+            color: #ffffff;
             z-index: 40;
             overflow: hidden;
+        }
+
+        #boot-ascii {
+            white-space: pre;
+            font-family: var(--font-stack);
+            color: #ffffff;
+            font-size: 0.75rem;
+            line-height: 1.1;
+            margin-bottom: 25px;
+        }
+
+        .boot-log-line {
+            margin-bottom: 12px;
+            color: #ffffff;
+            font-family: var(--font-stack);
+            white-space: pre;
+        }
+
+        /* Login Screen */
+        #login-ui {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: var(--bg-color);
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        #login-ui.fade-in {
+            opacity: 1;
+        }
+
+        .login-window {
+            width: 250px;
+            background: #111111;
+            border: 1px solid #2a2a2a;
+            box-shadow: 0 0 20px rgba(0,0,0,0.9), inset 0 0 2px rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-header {
+            background: #181818;
+            padding: 5px 10px;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            color: #777;
+            letter-spacing: 1px;
+        }
+
+        .login-close {
+            color: #555;
+            font-size: 0.75rem;
+        }
+
+        .login-body {
+            padding: 20px 16px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .login-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .login-subtitle {
+            font-size: 0.7rem;
+            color: #777;
+            margin-bottom: 14px;
+            letter-spacing: 1px;
+        }
+
+        .login-select-wrapper {
+            width: 100%;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .login-select {
+            width: 100%;
+            background: #080808;
+            border: 1px solid #333;
+            color: #eee;
+            padding: 6px 10px;
+            font-family: var(--font-stack);
+            font-size: 0.8rem;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .login-select-wrapper::after {
+            content: '∨';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+            font-size: 0.65rem;
+            pointer-events: none;
+        }
+
+        .login-btn {
+            background: #1c1c1c;
+            border: 1px solid #3d3d3d;
+            color: #eee;
+            padding: 5px 24px;
+            font-family: var(--font-stack);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+        }
+
+        .login-btn:hover {
+            background: #2a2a2a;
+            border-color: #666;
+            color: #fff;
         }
 
         /* Main OS Interface */
@@ -101,6 +230,12 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        #main-ui.fade-in {
+            opacity: 1;
         }
 
         .terminal-window {
@@ -264,7 +399,28 @@
 
     <!-- Boot Terminal -->
     <div id="boot">
+        <div id="boot-ascii"></div>
         <div id="boot-log"></div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-ui">
+        <div class="login-window">
+            <div class="login-header">
+                <span>user login</span>
+                <span class="login-close">✕</span>
+            </div>
+            <div class="login-body">
+                <div class="login-title">Login</div>
+                <div class="login-subtitle">Select a user to login to</div>
+                <div class="login-select-wrapper">
+                    <select class="login-select" id="user-select">
+                        <option value="quat">quat</option>
+                    </select>
+                </div>
+                <button class="login-btn" onclick="submitLogin()">OK</button>
+            </div>
+        </div>
     </div>
 
     <!-- Main OS Interface -->
@@ -285,7 +441,7 @@
                     <img src="image_9ffce4.jpg" alt="quat avatar">
                 </div>
 
-                <div class="user-name">quat</div>
+                <div class="user-name" id="display-username">quat</div>
                 <div class="user-desc">1017</div>
                 <div class="sub-tag"><span class="status-dot"></span>system/online</div>
 
@@ -295,7 +451,7 @@
                 <div class="cli-container" id="cli-box" onclick="document.getElementById('cli-input').focus()">
                     <div class="cli-output" id="cli-output">Type 'help' to list terminal commands.</div>
                     <div class="cli-input-row">
-                        <span class="cli-prompt">quat@trench:~$</span>
+                        <span class="cli-prompt" id="cli-prompt-label">quat@trench:~$</span>
                         <input type="text" id="cli-input" class="cli-input" autocomplete="off" spellcheck="false">
                     </div>
                 </div>
@@ -312,13 +468,17 @@
     <script>
         const audio = document.getElementById('bg-audio');
 
+        const asciiBanner = ` _____                    _       ____   ____ 
+|_   _| __ ___ _ __   ___| |__   / __ \\ / ___|
+  | || '__/ _ \\ '_ \\ / __| '_ \\ | |  | |\\___ \\
+  | || | |  __/ | | | (__| | | || |__| | ___) |
+  |_||_|  \\___|_| |_|\\___|_| |_| \\____/ |____/ `;
+
         const bootLogs = [
-            "INITIALIZING TrenchOS v1.0.4...",
-            "LOADING KERNEL MODULES...",
-            "MOUNTING /DEV/SKELETRIX...",
-            "AUTHENTICATING USER: quat (@diorpillow)...",
-            "DECRYPTION COMPLETE.",
-            "LAUNCHING INTERACTIVE TERMINAL..."
+            "[ OK ] quat is online.",
+            "[ OK ] Loading terminal...",
+            "[ OK ] System ready.",
+            "[ OK ] Welcome, quat."
         ];
 
         function startBootSequence() {
@@ -330,32 +490,100 @@
                 audio.volume = 0.5;
                 audio.play().catch(() => console.log("Audio playback blocked"));
 
-                runBootLogs(0);
+                typeAsciiBanner(0);
             }, 500);
         }
 
-        function runBootLogs(index) {
-            if (index < bootLogs.length) {
-                const logItem = document.createElement('div');
-                logItem.style.marginBottom = '8px';
-                logItem.innerText = `> ${bootLogs[index]}`;
-                document.getElementById('boot-log').appendChild(logItem);
-                
-                setTimeout(() => runBootLogs(index + 1), 180);
+        // Print ASCII Banner Character-by-Character
+        function typeAsciiBanner(charIndex) {
+            const asciiBox = document.getElementById('boot-ascii');
+            if (charIndex < asciiBanner.length) {
+                asciiBox.textContent += asciiBanner.charAt(charIndex);
+                setTimeout(() => typeAsciiBanner(charIndex + 1), 3);
             } else {
-                setTimeout(() => {
-                    document.getElementById('boot').style.display = 'none';
-                    document.getElementById('main-ui').style.display = 'flex';
-                    document.getElementById('cli-input').focus();
-                }, 300);
+                setTimeout(() => runBootLogs(0), 100);
             }
         }
 
-        function printToCli(htmlText) {
+        // CRT Character-by-Character Boot Log Sequence
+        function runBootLogs(index) {
+            if (index < bootLogs.length) {
+                const logItem = document.createElement('div');
+                logItem.className = 'boot-log-line';
+                document.getElementById('boot-log').appendChild(logItem);
+                
+                const textToType = bootLogs[index];
+                let charIndex = 0;
+
+                function typeBootChar() {
+                    if (charIndex < textToType.length) {
+                        logItem.textContent += textToType.charAt(charIndex);
+                        charIndex++;
+                        setTimeout(typeBootChar, 18);
+                    } else {
+                        setTimeout(() => runBootLogs(index + 1), 180);
+                    }
+                }
+                typeBootChar();
+            } else {
+                setTimeout(() => {
+                    document.getElementById('boot').style.display = 'none';
+                    const loginUi = document.getElementById('login-ui');
+                    loginUi.style.display = 'flex';
+                    setTimeout(() => loginUi.classList.add('fade-in'), 20);
+                }, 500);
+            }
+        }
+
+        function submitLogin() {
+            const loginUi = document.getElementById('login-ui');
+            loginUi.classList.remove('fade-in');
+
+            setTimeout(() => {
+                loginUi.style.display = 'none';
+                const mainUi = document.getElementById('main-ui');
+                mainUi.style.display = 'flex';
+                setTimeout(() => {
+                    mainUi.classList.add('fade-in');
+                    document.getElementById('cli-input').focus();
+                }, 20);
+            }, 600);
+        }
+
+        // CRT Character-by-Character Terminal Printer
+        let isTyping = false;
+        function typeWriterPrint(promptText, responseText) {
             const cliOutput = document.getElementById('cli-output');
-            cliOutput.innerHTML += htmlText;
             const cliBox = document.getElementById('cli-box');
-            cliBox.scrollTop = cliBox.scrollHeight;
+            
+            const promptLine = document.createElement('div');
+            promptLine.innerHTML = `<span style="color: var(--main-accent)">quat@trench:~$ ${promptText}</span>`;
+            cliOutput.appendChild(promptLine);
+
+            if (!responseText) return;
+
+            const responseLine = document.createElement('div');
+            cliOutput.appendChild(responseLine);
+
+            isTyping = true;
+
+            const plainText = responseText.replace(/<[^>]*>/g, '');
+            let i = 0;
+            const speed = 12;
+
+            function typeChar() {
+                if (i < plainText.length) {
+                    responseLine.textContent += plainText.charAt(i);
+                    i++;
+                    cliBox.scrollTop = cliBox.scrollHeight;
+                    setTimeout(typeChar, speed);
+                } else {
+                    responseLine.innerHTML = responseText;
+                    isTyping = false;
+                    cliBox.scrollTop = cliBox.scrollHeight;
+                }
+            }
+            typeChar();
         }
 
         // Terminal Interactive Commands
@@ -372,7 +600,7 @@ audio    : audio options
 neofetch : display system specs
 clear    : clear output screen`,
 
-            'whoami': `user : quat\ndesc : 1017\nhost : github.io`,
+            'whoami': () => `user : ${document.getElementById('display-username').innerText}\ndesc : 1017\nhost : github.io`,
 
             'socials': `discord   : @diorpillow\ninstagram : <a href="https://instagram.com/diorpillow" target="_blank" class="cmd-link">@diorpillow</a>\ntiktok  : <a href="https://tiktok.com/@xrlr" target="_blank" class="cmd-link">@xrlr</a>\ntiktok  : <a href="https://tiktok.com/@tabiwarrior" target="_blank" class="cmd-link">@tabiwarrior</a>`,
 
@@ -388,6 +616,8 @@ clear    : clear output screen`,
 
         cliInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
+                if (isTyping) return;
+
                 const rawVal = cliInput.value.trim();
                 const inputVal = rawVal.toLowerCase();
                 const args = inputVal.split(' ');
@@ -397,7 +627,6 @@ clear    : clear output screen`,
 
                 let response = '';
 
-                // Handle Audio Subcommands
                 if (mainCmd === 'audio') {
                     const subCmd = args[1];
                     const param = args[2];
@@ -425,8 +654,10 @@ clear    : clear output screen`,
                     response = `command not found: ${mainCmd}. Type 'help' for options.`;
                 }
 
-                if (mainCmd !== 'clear') {
-                    printToCli(`\n<span style="color: var(--main-accent)">quat@trench:~$ ${rawVal}</span>\n${response}`);
+                if (mainCmd === 'clear') {
+                    commands['clear']();
+                } else {
+                    typeWriterPrint(rawVal, response);
                 }
 
                 cliInput.value = '';
